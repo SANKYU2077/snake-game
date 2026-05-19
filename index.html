@@ -125,7 +125,7 @@
         </div>
       </div>
     </div>
-    <canvas id="game" width="1440" height="1440"></canvas>
+    <canvas id="game" width="1400" height="1400"></canvas>
     <audio id="bgm" src="nianzhangshi.mp3" loop preload="auto"></audio>
     <div class="controls">
       <span>P1 <kbd>↑↓←→</kbd></span>
@@ -156,7 +156,7 @@ const imgXuebi = new Image(); imgXuebi.src = IMG_BASE + 'xuebi.png';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const GRID = 90, COLS = 16, ROWS = 16;
+const GRID = 100, COLS = 14, ROWS = 14;
 const overlay = document.getElementById('overlay');
 const goBox = document.getElementById('goBox');
 const musicBtn = document.getElementById('musicBtn');
@@ -274,12 +274,12 @@ function spawnParticles(x, y, color, count = 6) {
 }
 
 function init() {
-  snakes = [initSnake(10, 12)];
+  snakes = [initSnake(5, 7)];
   dirs = [{ x: 1, y: 0 }];
   nextDirs = [{ x: 1, y: 0 }];
   scores = [0];
   if (mode === 2) {
-    snakes.push(initSnake(14, 9));  // different row, avoids instant collision
+    snakes.push(initSnake(8, 6));  // different row, avoids instant collision
     dirs.push({ x: 1, y: 0 });  // both face same direction
     nextDirs.push({ x: 1, y: 0 });
     scores.push(0);
