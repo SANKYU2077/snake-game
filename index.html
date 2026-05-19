@@ -104,6 +104,40 @@
   .lb-clear { text-align: center; margin-top: 10px; }
   .lb-clear button { background: transparent; border: none; color: #333; cursor: pointer; font-size: 10px; font-family: inherit; }
   .lb-clear button:hover { color: #ff6b6b; }
+  /* Touch D-Pad */
+  .dpad { display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 5; }
+  .dpad-row { display: flex; justify-content: center; }
+  .dpad-btn {
+    width: 56px; height: 56px; margin: 3px; border: 2px solid rgba(0,255,136,0.3);
+    background: rgba(0,255,136,0.08); color: #00ff88; border-radius: 12px;
+    font-size: 24px; cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.1s;
+  }
+  .dpad-btn:active { background: rgba(0,255,136,0.25); border-color: #00ff88; }
+  .dpad-spacer { width: 56px; height: 56px; margin: 3px; }
+  /* Mobile responsive */
+  @media (max-width: 900px) {
+    body { overflow-y: auto; align-items: flex-start; padding: 10px; }
+    .wrap { flex-direction: column; align-items: center; max-width: 100vw; }
+    .container { padding: 12px; border-radius: 12px; }
+    .header { margin-bottom: 10px; }
+    .mode-tab { padding: 8px 16px; font-size: 14px; }
+    .score-item .val { font-size: 28px; }
+    .score-item .label { font-size: 12px; }
+    .controls { font-size: 12px; flex-wrap: wrap; gap: 6px; }
+    .controls kbd { font-size: 11px; padding: 1px 6px; }
+    .music-btn { font-size: 12px; padding: 6px 10px; }
+    .dpad { display: block; }
+    .go-box { min-width: auto; padding: 24px 30px; }
+    .go-box h2 { font-size: 26px; }
+    .go-box button { font-size: 14px; padding: 10px 20px; }
+    .go-box input { font-size: 16px; width: 180px; }
+    .lb-panel { padding: 16px; min-width: auto; }
+    .lb-panel h3 { font-size: 18px; }
+    .lb-item { font-size: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -126,6 +160,12 @@
       </div>
     </div>
     <canvas id="game" width="1400" height="1400"></canvas>
+    <!-- Mobile D-Pad -->
+    <div class="dpad" id="dpad">
+      <div class="dpad-row"><div class="dpad-spacer"></div><div class="dpad-btn" ontouchstart="handleDPad(event,'up')" onmousedown="handleDPad(event,'up')">▲</div><div class="dpad-spacer"></div></div>
+      <div class="dpad-row"><div class="dpad-btn" ontouchstart="handleDPad(event,'left')" onmousedown="handleDPad(event,'left')">◀</div><div class="dpad-spacer"></div><div class="dpad-btn" ontouchstart="handleDPad(event,'right')" onmousedown="handleDPad(event,'right')">▶</div></div>
+      <div class="dpad-row"><div class="dpad-spacer"></div><div class="dpad-btn" ontouchstart="handleDPad(event,'down')" onmousedown="handleDPad(event,'down')">▼</div><div class="dpad-spacer"></div></div>
+    </div>
     <audio id="bgm" src="nianzhangshi.mp3" loop preload="auto"></audio>
     <div class="controls">
       <span>P1 <kbd>↑↓←→</kbd></span>
@@ -594,8 +634,19 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Touch
-let touchStartX = 0, touchStartY = 0;
+// Touch D-Pad handler
+function handleDPad(e, dir) {
+  e.preventDefault();
+  if (!running || paused) return;
+  switch (dir) {
+    case 'up':    if (dirs[0].y !== 1)  nextDirs[0] = { x: 0, y: -1 }; break;
+    case 'down':  if (dirs[0].y !== -1) nextDirs[0] = { x: 0, y: 1 };  break;
+    case 'left':  if (dirs[0].x !== 1)  nextDirs[0] = { x: -1, y: 0 }; break;
+    case 'right': if (dirs[0].x !== -1) nextDirs[0] = { x: 1, y: 0 };  break;
+  }
+}
+
+// Touch swipe
 canvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
 canvas.addEventListener('touchmove', e => e.preventDefault());
 canvas.addEventListener('touchend', e => {
