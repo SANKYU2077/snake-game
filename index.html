@@ -104,18 +104,8 @@
   .lb-clear { text-align: center; margin-top: 10px; }
   .lb-clear button { background: transparent; border: none; color: #333; cursor: pointer; font-size: 10px; font-family: inherit; }
   .lb-clear button:hover { color: #ff6b6b; }
-  /* Touch D-Pad */
-  .dpad { display: none; margin-top: 12px; text-align: center; user-select: none; -webkit-user-select: none; }
-  .dpad-row { display: flex; justify-content: center; gap: 4px; }
-  .dpad-btn {
-    width: 60px; height: 60px; border: 2px solid rgba(0,255,136,0.4);
-    background: rgba(0,255,136,0.1); color: #00ff88; border-radius: 14px;
-    font-size: 28px; cursor: pointer; user-select: none;
-    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .dpad-btn:active { background: rgba(0,255,136,0.3); border-color: #00ff88; }
-  .dpad-spacer { width: 60px; height: 60px; }
+  /* Mobile pause button */
+  #mobilePause { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   /* Mobile responsive */
   @media (max-width: 900px) {
     body { overflow-y: auto; align-items: flex-start; padding: 10px; }
@@ -128,7 +118,7 @@
     .controls { font-size: 12px; flex-wrap: wrap; gap: 6px; }
     .controls kbd { font-size: 11px; padding: 1px 6px; }
     .music-btn { font-size: 12px; padding: 6px 10px; }
-    .dpad { display: block; }
+    #mobilePause { display: block !important; }
     .go-box { min-width: auto; padding: 24px 30px; }
     .go-box h2 { font-size: 26px; }
     .go-box button { font-size: 14px; padding: 10px 20px; }
@@ -159,12 +149,7 @@
       </div>
     </div>
     <canvas id="game" width="1400" height="1400"></canvas>
-    <!-- Mobile D-Pad -->
-    <div class="dpad" id="dpad">
-      <div class="dpad-row"><div class="dpad-spacer"></div><div class="dpad-btn" ontouchstart="handleDPad(event,'up')" onmousedown="handleDPad(event,'up')">▲</div><div class="dpad-spacer"></div></div>
-      <div class="dpad-row"><div class="dpad-btn" ontouchstart="handleDPad(event,'left')" onmousedown="handleDPad(event,'left')">◀</div><div class="dpad-spacer"></div><div class="dpad-btn" ontouchstart="handleDPad(event,'right')" onmousedown="handleDPad(event,'right')">▶</div></div>
-      <div class="dpad-row"><div class="dpad-spacer"></div><div class="dpad-btn" ontouchstart="handleDPad(event,'down')" onmousedown="handleDPad(event,'down')">▼</div><div class="dpad-spacer"></div></div>
-    </div>
+    <button class="music-btn on" id="mobilePause" style="display:none;margin:8px auto;font-size:20px;padding:12px 30px;" onclick="toggleMobilePause()">⏯ 暂停</button>
     <audio id="bgm" src="nianzhangshi.mp3" loop preload="auto"></audio>
     <div class="controls">
       <span>P1 <kbd>↑↓←→</kbd></span>
@@ -633,33 +618,44 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Touch D-Pad handler
-function handleDPad(e, dir) {
-  e.preventDefault();
-  if (!running || paused) return;
-  switch (dir) {
-    case 'up':    if (dirs[0].y !== 1)  nextDirs[0] = { x: 0, y: -1 }; break;
-    case 'down':  if (dirs[0].y !== -1) nextDirs[0] = { x: 0, y: 1 };  break;
-    case 'left':  if (dirs[0].x !== 1)  nextDirs[0] = { x: -1, y: 0 }; break;
-    case 'right': if (dirs[0].x !== -1) nextDirs[0] = { x: 1, y: 0 };  break;
-  }
+// Mobile pause button
+function toggleMobilePause() {
+  if (!running) return;
+  paused = !paused;
+  document.getElementById('mobilePause').textContent = paused ? '▶ 继续' : '⏯ 暂停';
+  if (!paused) { lastTime = performance.now(); if (musicOn) startMusic(); }
+  else { bgm.pause(); }
 }
 
-// Touch swipe
-canvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
-canvas.addEventListener('touchmove', e => e.preventDefault());
+// Touch swipe controls
+let tsX = 0, tsY = 0, tsTime = 0;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  tsX = e.touches[0].clientX; tsY = e.touches[0].clientY; tsTime = Date.now();
+  if (!audioCtx) getAudioCtx();
+  if (musicOn && bgm.paused) startMusic();
+}, { passive: false });
+canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 canvas.addEventListener('touchend', e => {
-  if (paused) return;
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 30 && dirs[0].x !== -1) nextDirs[0] = { x: 1, y: 0 };
-    else if (dx < -30 && dirs[0].x !== 1) nextDirs[0] = { x: -1, y: 0 };
-  } else {
-    if (dy > 30 && dirs[0].y !== -1) nextDirs[0] = { x: 0, y: 1 };
-    else if (dy < -30 && dirs[0].y !== 1) nextDirs[0] = { x: 0, y: -1 };
+  e.preventDefault();
+  if (!running || paused) return;
+  const dx = e.changedTouches[0].clientX - tsX;
+  const dy = e.changedTouches[0].clientY - tsY;
+  const dt = Date.now() - tsTime;
+  // Swipe threshold: 20px minimum, or quickly
+  if (Math.abs(dx) < 20 && Math.abs(dy) < 20 && dt < 300) {
+    // tap detected — toggle pause
+    toggleMobilePause();
+    return;
   }
-});
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 0 && dirs[0].x !== -1) nextDirs[0] = { x: 1, y: 0 };
+    else if (dx < 0 && dirs[0].x !== 1) nextDirs[0] = { x: -1, y: 0 };
+  } else {
+    if (dy > 0 && dirs[0].y !== -1) nextDirs[0] = { x: 0, y: 1 };
+    else if (dy < 0 && dirs[0].y !== 1) nextDirs[0] = { x: 0, y: -1 };
+  }
+}, { passive: false });
 
 // Init
 bgm.volume = 0.4;
